@@ -4,14 +4,18 @@ import { AgentRun } from '../types/AgentRun.js';
 import { AgentRunner } from '../agent/AgentRunner.js';
 import { AgentExecutor } from '../agent/AgentSpawner.js';
 import { MetricsAggregator } from '../metrics/MetricsAggregator.js';
+import { Scorer } from '../scoring/Scorer.js';
+import { EvaluatorFunction } from '../types/Evaluator.js';
 
 export class Orchestrator {
   private runner: AgentRunner;
   private maxConcurrent: number;
+  private evaluator?: EvaluatorFunction;
 
-  constructor(executor: AgentExecutor, options?: { maxConcurrent?: number; timeoutMs?: number }) {
+  constructor(executor: AgentExecutor, options?: { maxConcurrent?: number; timeoutMs?: number; evaluator?: EvaluatorFunction }) {
     this.runner = new AgentRunner(executor, options?.timeoutMs);
     this.maxConcurrent = options?.maxConcurrent ?? Infinity;
+    this.evaluator = options?.evaluator;
   }
 
   async run(config: ExperimentConfig): Promise<ExperimentResult> {
@@ -60,6 +64,15 @@ export class Orchestrator {
       }
     }
     await Promise.all(executing);
+
+    // Score runs with the evaluator if provided
+    if (this.evaluator) {
+      const scorer = new Scorer(this.evaluator, config.task.evaluator);
+      for (let i = 0; i < runs.length; i++) {
+        const scored = await scorer.score(runs[i]);
+        runs[i] = scored;
+      }
+    }
 
     const aggregator = new MetricsAggregator();
     const modelMetrics = aggregator.aggregate(runs);

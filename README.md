@@ -4,7 +4,7 @@ A comprehensive framework for systematically comparing AI model performance usin
 
 ## What It Does
 
-- **Multi-Model Comparison**: Execute tasks in parallel across any Squad SDK models (GPT-4, Claude, etc.)
+- **Multi-Model Comparison**: Execute tasks in parallel across any Squad SDK models (GPT-4o, Claude Sonnet, etc.)
 - **Automated Evaluation**: Pluggable evaluator system to assess quality (test pass rates, lint scores, custom metrics)
 - **Metrics Collection**: Track token usage, cost, latency, and output quality per run
 - **Statistical Analysis**: Compute confidence intervals and significance testing for robust comparisons
@@ -27,7 +27,11 @@ Scorer (evaluate quality)
 Reporter (results table) → Results Store
 ```
 
-## SDK Modules Used
+## SDK Integration Status
+
+> **Note:** This is a standalone framework demonstrating multi-model comparison patterns. It does not currently import or depend on the Squad SDK at runtime. Future versions could integrate with Squad SDK's MODELS catalog and cost-tracker for real agent orchestration.
+
+## SDK Modules (Planned)
 
 | Module | Purpose |
 |--------|---------|
@@ -108,7 +112,7 @@ Experiments are defined using JSON configuration files. Here's an example:
     "inputFiles": [],
     "evaluator": "test-pass-rate"
   },
-  "models": ["gpt-4", "claude-opus", "gpt-3.5-turbo"],
+  "models": ["gpt-4o", "claude-sonnet-4-20250514", "gpt-3.5-turbo"],
   "repetitions": 3,
   "budget": {
     "maxPerRun": 5000,

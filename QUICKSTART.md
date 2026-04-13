@@ -69,7 +69,7 @@ Create a new file called `my-experiment.json`:
     "inputFiles": [],
     "evaluator": "test-pass-rate"
   },
-  "models": ["gpt-4", "claude-opus", "gpt-3.5-turbo"],
+  "models": ["gpt-4o", "claude-sonnet-4-20250514", "gpt-3.5-turbo"],
   "repetitions": 2,
   "budget": {
     "maxPerRun": 2000,
@@ -81,17 +81,20 @@ Create a new file called `my-experiment.json`:
 ### Step 2: Run the Experiment
 
 ```bash
-# Run the experiment (programmatic API)
-node --loader ts-node/esm -e "
-import { runExperiment } from './src/cli/runExperiment.js';
+# Build first, then run via compiled output
+npm run build
+
+node -e "
+const { runExperiment } = require('./dist/cli/runExperiment.js');
 
 const options = {
   maxConcurrent: 3
 };
 
-const result = await runExperiment('./my-experiment.json', options);
-console.log(result.output);
-process.exit(result.exitCode);
+runExperiment('./my-experiment.json', options).then(result => {
+  console.log(result.output);
+  process.exit(result.exitCode);
+});
 "
 ```
 
@@ -108,12 +111,12 @@ Run Date: 2024-01-15T10:30:00Z
 
 Model             Avg Cost ($)  Avg Latency (ms)  Quality Score  StdDev
 ─────────────────────────────────────────────────────────────────────────
-gpt-4             0.0045        1250              0.95           0.03
-claude-opus       0.0038        980               0.92           0.05
+gpt-4o            0.0045        1250              0.95           0.03
+claude-sonnet-4   0.0038        980               0.92           0.05
 gpt-3.5-turbo     0.0012        450               0.87           0.08
 
 Recommendations:
-  ✓ Best Quality:  gpt-4 (0.95)
+  ✓ Best Quality:  gpt-4o (0.95)
   ⚡ Fastest:      gpt-3.5-turbo (450ms)
   💰 Cheapest:     gpt-3.5-turbo ($0.0012)
 
@@ -149,7 +152,7 @@ The `task` object tells the framework what to run:
 List any models available in the Squad SDK:
 
 ```json
-"models": ["gpt-4", "claude-opus", "gpt-3.5-turbo"]
+"models": ["gpt-4o", "claude-sonnet-4-20250514", "gpt-3.5-turbo"]
 ```
 
 Each model runs independently with the same task.
@@ -259,7 +262,7 @@ Results are stored as JSON for downstream analysis:
 ```json
 {
   "name": "gpt4-vs-claude",
-  "models": ["gpt-4", "claude-opus"],
+  "models": ["gpt-4o", "claude-sonnet-4-20250514"],
   "repetitions": 3,
   "task": { ... }
 }
