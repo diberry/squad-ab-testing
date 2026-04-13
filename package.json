@@ -1,0 +1,19 @@
+{
+  "name": "project-squad-sdk-example-ab-testing",
+  "version": "0.1.0",
+  "description": "Multi-Model A/B Testing Framework for Squad SDK",
+  "type": "module",
+  "main": "dist/index.js",
+  "scripts": {
+    "build": "tsc",
+    "test": "vitest"
+  },
+  "dependencies": {
+    "@bradygaster/squad-sdk": "latest",
+    "@bradygaster/squad-cli": "latest"
+  },
+  "devDependencies": {
+    "typescript": "^5.0.0",
+    "vitest": "^1.0.0"
+  }
+}
