@@ -1,14 +1,21 @@
-// Evaluator registry implementation placeholder
-import { Evaluator, EvaluatorFunction } from '../types/Evaluator.js';
+import { EvaluatorFunction } from '../types/Evaluator.js';
 
 export class EvaluatorRegistry {
+  private evaluators: Map<string, EvaluatorFunction> = new Map();
+
   register(name: string, evaluator: EvaluatorFunction): void {
-    // TODO: Implement evaluator registration
-    throw new Error('Not implemented');
+    this.evaluators.set(name, evaluator);
   }
 
   get(name: string): EvaluatorFunction {
-    // TODO: Implement evaluator retrieval
-    throw new Error('Not implemented');
+    const evaluator = this.evaluators.get(name);
+    if (!evaluator) {
+      throw new Error(`Evaluator not found: ${name}`);
+    }
+    return evaluator;
+  }
+
+  has(name: string): boolean {
+    return this.evaluators.has(name);
   }
 }
