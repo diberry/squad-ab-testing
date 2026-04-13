@@ -1,108 +1,19 @@
 # Multi-Model A/B Testing Framework
 
-A comprehensive framework for systematically comparing AI model performance using the Squad SDK. Run identical tasks across multiple models, collect quality/cost/speed metrics, and get data-driven model selection recommendations.
+This framework lets you systematically compare AI model performance by running identical tasks across models, collecting metrics (quality, cost, speed), and getting data-driven recommendations. Define experiments as JSON—no code required—and run side-by-side comparisons to choose the best model for your use case.
 
-## What It Does
+## Using This Example
 
-- **Multi-Model Comparison**: Execute tasks in parallel across any Squad SDK models (GPT-4o, Claude Sonnet, etc.)
-- **Automated Evaluation**: Pluggable evaluator system to assess quality (test pass rates, lint scores, custom metrics)
-- **Metrics Collection**: Track token usage, cost, latency, and output quality per run
-- **Statistical Analysis**: Compute confidence intervals and significance testing for robust comparisons
-- **Results Reporting**: Generate human-readable comparison tables and JSON exports
-- **Experiment Configuration**: Define experiments via simple JSON config files
-
-## Architecture Overview
-
-```
-Config → Parser → Validator
-                     ↓
-Task Builder → Evaluator Registry
-                     ↓
-Orchestrator → Agent Spawner (parallel)
-                     ↓
-Metrics Collector → Metrics Aggregator
-                     ↓
-Scorer (evaluate quality)
-                     ↓
-Reporter (results table) → Results Store
-```
-
-## SDK Integration Status
-
-> **Note:** This is a standalone framework demonstrating multi-model comparison patterns. It does not currently import or depend on the Squad SDK at runtime. Future versions could integrate with Squad SDK's MODELS catalog and cost-tracker for real agent orchestration.
-
-## SDK Modules (Planned)
-
-| Module | Purpose |
-|--------|---------|
-| `runtime.MODELS` | Catalog of available models with metadata |
-| `runtime.cost-tracker` | Track token consumption and costs per run |
-| `builders.defineAgent()` | Create agents with specific model assignments |
-| `state.SquadState` | Store experiment results and metrics |
-
-## Project Structure
-
-```
-src/
-├── cli/                   # CLI entry point (runExperiment command)
-├── config/                # Config file parsing
-├── validators/            # Config and model validation
-├── types/                 # TypeScript interfaces
-├── task/                  # Task definition and building
-├── evaluators/            # Quality evaluators (registry, built-ins)
-├── agent/                 # Agent spawning and execution
-├── orchestration/         # Parallel run coordination
-├── metrics/               # Metrics collection and aggregation
-├── scoring/               # Quality evaluation and scoring
-├── reporting/             # Results formatting (table, JSON)
-├── storage/               # Results persistence
-├── stats/                 # Statistical analysis
-└── recommendations/       # Model ranking and recommendations
-
-test/
-├── config/                # Config parsing tests
-├── evaluators/            # Evaluator registry tests
-├── agent/                 # Agent runner tests
-├── metrics/               # Metrics collection tests
-├── orchestration/         # Orchestrator tests
-├── scoring/               # Scorer tests
-├── reporting/             # Reporter tests
-├── stats/                 # Statistics tests
-└── cli/                   # End-to-end CLI tests
-```
-
-## Installation
-
-1. **Clone the repository** and navigate to the project directory:
-   ```bash
-   git clone <repo-url>
-   cd project-squad-sdk-example-ab-testing
-   ```
-
-2. **Install dependencies**:
-   ```bash
-   npm install
-   ```
-
-## Building
+### 1. Install
 
 ```bash
+npm install
 npm run build
 ```
 
-Compiles TypeScript to JavaScript in the `dist/` directory.
+### 2. Create an Experiment Config
 
-## Testing
-
-```bash
-npm run test
-```
-
-Runs all unit and integration tests using Vitest.
-
-## Configuration
-
-Experiments are defined using JSON configuration files. Here's an example:
+Create a JSON file (e.g., `my-experiment.json`) that defines what to test:
 
 ```json
 {
@@ -121,43 +32,198 @@ Experiments are defined using JSON configuration files. Here's an example:
 }
 ```
 
-### Config Fields
+**Config Fields:**
+- **name**: Unique identifier for this experiment
+- **task.prompt**: Instruction/prompt to send to each model
+- **task.inputFiles**: Optional context files (relative paths)
+- **task.evaluator**: Quality metric (`test-pass-rate`, `lint-score`, or custom)
+- **models**: List of models to compare
+- **repetitions**: How many times to run each model
+- **budget**: Optional token/cost limits
 
-- **name** (string): Unique experiment identifier
-- **task** (object):
-  - **prompt** (string): The task to run on each model
-  - **inputFiles** (string[]): Optional file paths to include in context
-  - **evaluator** (string): Evaluator type (`test-pass-rate`, `lint-score`, or custom)
-- **models** (string[]): Array of model names to test
-- **repetitions** (number): How many times to run each model
-- **budget** (object, optional):
-  - **maxPerRun**: Token limit per single run
-  - **maxTotal**: Total token budget for entire experiment
+### 3. Run the Experiment
 
-## Usage
-
-See [QUICKSTART.md](./QUICKSTART.md) for a step-by-step walkthrough of setting up and running your first experiment.
-
-## Key Features
-
-- **Pluggable Evaluators**: Register custom evaluation functions for domain-specific quality metrics
-- **Graceful Error Handling**: Continues even if one model fails; marks results appropriately
-- **Concurrent Execution**: Respects rate limits while maximizing throughput
-- **Historical Tracking**: Store and compare results across multiple experiment runs
-- **Statistical Rigor**: Confidence intervals and significance testing for decisions
-
-## Development
-
-The project follows a test-first development approach. Each feature includes:
-1. Comprehensive unit tests
-2. Integration tests for cross-module workflows
-3. Mocked SDK dependencies for isolation
-
-Run tests in watch mode:
 ```bash
-npm run test -- --watch
+node -e "
+const { runExperiment } = require('./dist/cli/runExperiment.js');
+runExperiment('./my-experiment.json', { maxConcurrent: 3 })
+  .then(result => {
+    console.log(result.output);
+    process.exit(result.exitCode);
+  });
+"
 ```
 
-## License
+### 4. Read the Results Table
 
-See LICENSE file for details.
+The output shows side-by-side comparison:
+
+```
+================================================================================
+A/B Test Results: code-generation-comparison
+Repetitions: 3
+================================================================================
+
+Model             Avg Cost ($)  Avg Latency (ms)  Quality Score  StdDev
+─────────────────────────────────────────────────────────────────────────
+gpt-4o            0.0045        1250              0.95           0.03
+claude-sonnet-4   0.0038        980               0.92           0.05
+gpt-3.5-turbo     0.0012        450               0.87           0.08
+
+Recommendations:
+  ✓ Best Quality:  gpt-4o (0.95)
+  ⚡ Fastest:      gpt-3.5-turbo (450ms)
+  💰 Cheapest:     gpt-3.5-turbo ($0.0012)
+
+================================================================================
+```
+
+**Columns explained:**
+- **Avg Cost ($)**: Average token cost per run
+- **Avg Latency (ms)**: Average response time
+- **Quality Score**: Evaluator result (0–1 scale)
+- **StdDev**: Standard deviation across repetitions
+
+Results are also saved as JSON for further analysis.
+
+## Extending This Example
+
+### Adding Custom Evaluators
+
+Register an evaluator to define custom quality metrics:
+
+```typescript
+import { EvaluatorRegistry } from './src/evaluators/EvaluatorRegistry.js';
+
+const registry = EvaluatorRegistry.getInstance();
+
+registry.register('my-eval', async (output: string) => {
+  const score = calculateQuality(output);  // Your logic
+  return { score, details: 'My evaluation result' };
+});
+```
+
+Then reference it in config:
+
+```json
+{
+  "evaluator": "my-eval"
+}
+```
+
+### Integrating with Real Model APIs
+
+The framework uses mocked models for testing. To integrate real APIs (OpenAI, Anthropic, etc.):
+
+1. **Update `src/agent/AgentSpawner.ts`** to call real model endpoints
+2. **Add API credentials** to environment variables
+3. **Implement cost tracking** using your model's pricing
+
+Example pseudo-code:
+
+```typescript
+// src/agent/AgentSpawner.ts
+async function executeAgent(prompt, model) {
+  if (model === 'gpt-4o') {
+    return callOpenAI(prompt, { model: 'gpt-4o' });
+  } else if (model === 'claude-sonnet-4-20250514') {
+    return callAnthropic(prompt, { model: 'claude-sonnet-4-20250514' });
+  }
+}
+```
+
+### Programmatic API
+
+Use the framework directly in TypeScript:
+
+```typescript
+import { ConfigParser } from './src/config/ConfigParser.js';
+import { Orchestrator } from './src/orchestration/Orchestrator.js';
+import { Reporter } from './src/reporting/Reporter.js';
+
+const config = await ConfigParser.parse('./config.json');
+const results = await Orchestrator.run(config, { maxConcurrent: 5 });
+const report = Reporter.generateTable(results);
+console.log(report);
+```
+
+### Architecture Overview
+
+```
+1. Config File (JSON)
+         ↓
+2. ConfigParser → Validates schema, loads files
+         ↓
+3. Orchestrator → Spawns agents in parallel
+         ↓
+4. AgentSpawner → Calls models, collects tokens/latency
+         ↓
+5. Evaluator → Runs quality check on output
+         ↓
+6. Metrics Aggregator → Computes avg, stddev, confidence intervals
+         ↓
+7. Reporter → Generates results table & recommendations
+         ↓
+8. Storage → Persists JSON results for analysis
+```
+
+## Project Structure
+
+```
+src/
+├── cli/              # CLI entry point (runExperiment)
+├── config/           # JSON config parsing
+├── validators/       # Config validation rules
+├── types/            # TypeScript interfaces
+├── task/             # Task definition & context building
+├── evaluators/       # Quality evaluators (registry + built-ins)
+├── agent/            # Agent execution (model calls)
+├── orchestration/    # Parallel run coordination
+├── metrics/          # Metrics collection & aggregation
+├── scoring/          # Quality score calculation
+├── reporting/        # Results table & JSON export
+├── storage/          # Persist results to disk
+├── stats/            # Statistical analysis
+└── recommendations/  # Model ranking & advice
+```
+
+## SDK Modules
+
+| Module | Purpose |
+|--------|---------|
+| `ConfigParser` | Parse and validate experiment JSON |
+| `Orchestrator` | Coordinate parallel model runs |
+| `AgentSpawner` | Execute task on a given model |
+| `EvaluatorRegistry` | Register/lookup quality evaluators |
+| `MetricsCollector` | Gather tokens, latency, cost |
+| `Reporter` | Format results as table + JSON |
+| `Recommender` | Rank models by cost/quality/speed |
+
+## Testing
+
+```bash
+npm run test              # Run all tests
+npm run test -- --watch  # Watch mode
+npm run build            # Compile TypeScript
+```
+
+Tests cover:
+- Config validation
+- Evaluator registry
+- Agent execution
+- Metrics calculation
+- Statistical analysis
+- Reporting and formatting
+
+## Roadmap
+
+- ✅ Config file parsing
+- ✅ Parallel orchestration
+- ✅ Built-in evaluators (test-pass-rate, lint-score)
+- ✅ Metrics collection & aggregation
+- ✅ Statistical analysis
+- ✅ Results reporting
+- 🔄 Real model API integration (OpenAI, Anthropic, etc.)
+- 🔄 Squad SDK runtime integration
+- 📋 Cost tracking and budgeting
+- 📋 Historical run comparison

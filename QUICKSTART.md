@@ -1,71 +1,43 @@
-# Quickstart Guide: A/B Testing Framework
+# Quickstart: A/B Testing Framework
 
-Get up and running with model comparison in 5 minutes.
+Get up and running in 5 minutes. Zero code writing—just configuration.
 
 ## Prerequisites
 
-- **Node.js 18+**: Download from [nodejs.org](https://nodejs.org/)
-- **npm 9+**: Included with Node.js
-- **Squad SDK**: This framework builds on the Squad SDK (installed via package.json)
+- **Node.js 18+** ([download](https://nodejs.org/))
+- **npm 9+** (included with Node.js)
 
-Verify your setup:
+Verify:
 ```bash
-node --version  # v18.0.0 or higher
-npm --version   # 9.0.0 or higher
+node --version && npm --version
 ```
 
 ## Setup
 
-### 1. Clone and Install
+### Step 0: Install and Build
 
 ```bash
-# Clone the repository
-git clone <repo-url>
-cd project-squad-sdk-example-ab-testing
-
-# Install dependencies
-npm install
+npm install && npm run build
 ```
 
-Expected output:
-```
-added XX packages in Xs
-```
-
-### 2. Build the Project
-
-```bash
-npm run build
-```
-
-Expected output:
-```
-# Compiles TypeScript files to dist/ directory
-# No errors if successful
-```
-
-### 3. Verify Installation
-
+Verify everything works:
 ```bash
 npm run test
 ```
 
-Expected output:
-```
-✓ PASS test/ (XX tests passed)
-```
+Expected: All tests pass (✓).
 
-## Your First Experiment
+## Your First A/B Test
 
-### Step 1: Create an Experiment Config
+### Step 1: Create experiment.json
 
-Create a new file called `my-experiment.json`:
+Create a file named `my-first-experiment.json`:
 
 ```json
 {
-  "name": "text-summarization",
+  "name": "text-summarization-test",
   "task": {
-    "prompt": "Summarize this text in 2-3 sentences: 'The Squad framework enables teams to build AI-powered applications using the power of multiple models working together. It provides abstraction over model differences, enabling teams to easily swap models and compare their outputs.'",
+    "prompt": "Summarize this in 2 sentences: 'The Squad framework enables AI teams to build applications using multiple models together, with abstraction over model differences.'",
     "inputFiles": [],
     "evaluator": "test-pass-rate"
   },
@@ -78,35 +50,36 @@ Create a new file called `my-experiment.json`:
 }
 ```
 
+**What this config does:**
+- **name**: Gives your experiment a label
+- **task.prompt**: The instruction to send to each model
+- **models**: List of models to compare (can be 2, 3, or more)
+- **repetitions**: Run each model 2 times to get average metrics
+- **evaluator**: Use built-in quality checker (`test-pass-rate` or `lint-score`)
+
 ### Step 2: Run the Experiment
 
 ```bash
-# Build first, then run via compiled output
-npm run build
-
 node -e "
 const { runExperiment } = require('./dist/cli/runExperiment.js');
-
-const options = {
-  maxConcurrent: 3
-};
-
-runExperiment('./my-experiment.json', options).then(result => {
-  console.log(result.output);
-  process.exit(result.exitCode);
-});
+runExperiment('./my-first-experiment.json', { maxConcurrent: 3 })
+  .then(result => {
+    console.log(result.output);
+    process.exit(result.exitCode);
+  });
 "
 ```
 
-### Step 3: Review Results
+Wait for completion (~1-2 min for mock models).
 
-Expected output (results table):
+### Step 3: Read the Results
+
+Output shows a comparison table:
 
 ```
 ================================================================================
-A/B Test Results: text-summarization
+A/B Test Results: text-summarization-test
 Repetitions: 2
-Run Date: 2024-01-15T10:30:00Z
 ================================================================================
 
 Model             Avg Cost ($)  Avg Latency (ms)  Quality Score  StdDev
@@ -123,152 +96,33 @@ Recommendations:
 ================================================================================
 ```
 
-## Experiment Configuration Explained
+**What each column means:**
+- **Avg Cost ($)**: Average expense per run (lower = cheaper)
+- **Avg Latency (ms)**: Average response time (lower = faster)
+- **Quality Score**: Evaluator result 0–1 (higher = better)
+- **StdDev**: Consistency (lower = more predictable)
 
-### Task Definition
+### Step 4: Compare & Choose
 
-The `task` object tells the framework what to run:
+Use the results to answer:
 
-```json
-"task": {
-  "prompt": "Your task prompt here",
-  "inputFiles": [
-    "path/to/document.txt",
-    "path/to/code.ts"
-  ],
-  "evaluator": "test-pass-rate"
-}
-```
+1. **Best overall?** Look at the recommendations section
+2. **Cost vs. quality?** Compare Cost column vs. Quality Score
+3. **Speed matters?** Pick the model with lowest latency
+4. **Consistent?** Models with low StdDev are more reliable
 
-- **prompt**: The instruction to send to each model
-- **inputFiles**: Optional context files (paths are relative to config file location)
-- **evaluator**: How to assess quality:
-  - `test-pass-rate` - Counts passing unit tests in generated code
-  - `lint-score` - Runs linter and returns pass/fail score
-  - Custom evaluators can be registered programmatically
+## Common Tweaks
 
-### Models
-
-List any models available in the Squad SDK:
-
-```json
-"models": ["gpt-4o", "claude-sonnet-4-20250514", "gpt-3.5-turbo"]
-```
-
-Each model runs independently with the same task.
-
-### Repetitions
-
-Run each model N times to collect statistical data:
-
-```json
-"repetitions": 3
-```
-
-More repetitions = more reliable results (but higher cost/time).
-
-### Budget
-
-Optionally set token and cost limits:
-
-```json
-"budget": {
-  "maxPerRun": 5000,
-  "maxTotal": 50000
-}
-```
-
-- `maxPerRun`: Tokens allowed per single model run
-- `maxTotal`: Total tokens across all runs
-
-## Advanced Usage
-
-### Custom Evaluators
-
-Register a custom evaluator in your code:
-
-```typescript
-import { EvaluatorRegistry } from './src/evaluators/EvaluatorRegistry.js';
-
-const registry = EvaluatorRegistry.getInstance();
-
-registry.register('my-custom-eval', async (output: string) => {
-  // Your evaluation logic
-  const score = evaluateResponse(output);
-  return { score, details: `Evaluated: ${output.length} chars` };
-});
-```
-
-Then reference it in your config:
-
-```json
-"evaluator": "my-custom-eval"
-```
-
-### Programmatic API
-
-Run experiments directly in your code:
-
-```typescript
-import { runExperiment } from './src/cli/runExperiment.js';
-import { AgentExecutor } from './src/agent/AgentSpawner.js';
-
-const executor = new AgentExecutor(/* squad config */);
-
-const result = await runExperiment('./config.json', {
-  executor,
-  maxConcurrent: 5,
-  storagePath: '.squad/experiments'
-});
-
-console.log(result.output);
-```
-
-### Analyzing Results
-
-Results are stored as JSON for downstream analysis:
+### Test Only 2 Models
 
 ```json
 {
-  "experimentName": "text-summarization",
-  "timestamp": "2024-01-15T10:30:00Z",
-  "runs": [
-    {
-      "model": "gpt-4",
-      "repetition": 1,
-      "tokens": { "input": 150, "output": 80 },
-      "cost": 0.0045,
-      "latency_ms": 1250,
-      "quality_score": 0.95,
-      "output": "Generated text..."
-    }
-  ],
-  "aggregates": [
-    {
-      "model": "gpt-4",
-      "avg_cost": 0.0045,
-      "avg_latency_ms": 1250,
-      "quality_score": 0.95,
-      "quality_stddev": 0.03
-    }
-  ]
-}
-```
-
-## Common Tasks
-
-### Compare just 2 models
-
-```json
-{
-  "name": "gpt4-vs-claude",
   "models": ["gpt-4o", "claude-sonnet-4-20250514"],
-  "repetitions": 3,
-  "task": { ... }
+  "repetitions": 3
 }
 ```
 
-### Run a quick test (fewer repetitions)
+### Quick Test (1 run per model)
 
 ```json
 {
@@ -276,70 +130,112 @@ Results are stored as JSON for downstream analysis:
 }
 ```
 
-### Test with stricter evaluation
-
-Use a custom evaluator that has higher standards:
+### More Accurate Results (Higher Repetitions)
 
 ```json
 {
-  "evaluator": "strict-test-pass-rate"
+  "repetitions": 5
 }
 ```
 
-### Compare model cost vs quality trade-off
+**Tradeoff:** More repetitions = more accurate but higher cost/time.
 
-Run with `repetitions: 5` or higher and review the results table. Look for:
-- **Best value**: Low cost + acceptable quality
-- **Best quality**: Highest score regardless of cost
-- **Best speed**: Lowest latency
+### Different Evaluator
+
+```json
+{
+  "evaluator": "lint-score"
+}
+```
+
+Available built-ins: `test-pass-rate`, `lint-score`
+
+### Include Context Files
+
+```json
+{
+  "task": {
+    "prompt": "Review this code and suggest improvements",
+    "inputFiles": ["src/utils.ts", "src/index.ts"],
+    "evaluator": "lint-score"
+  }
+}
+```
+
+Paths are relative to the config file location.
+
+### Set Budget Limits
+
+```json
+{
+  "budget": {
+    "maxPerRun": 3000,
+    "maxTotal": 30000
+  }
+}
+```
+
+Experiment stops if limits are exceeded.
+
+## What Happens During a Run
+
+1. ✅ Config loads and validates
+2. ✅ Framework spawns agents for each model in parallel
+3. ✅ Each agent runs your task and collects tokens/latency
+4. ✅ Evaluator scores the output (0–1)
+5. ✅ Metrics are aggregated (averages, stddev, etc.)
+6. ✅ Table and JSON results are written
+7. ✅ Recommendations are generated
 
 ## Troubleshooting
 
-### "Config validation failed: unknown model 'xyz'"
+### Config validation failed
 
-The model name isn't recognized by the Squad SDK. Check available models:
+**Error:** `"Config validation failed: unknown field 'xyz'"`
 
-```bash
-# List available models
-npm run build && node -e "console.log(require('./dist/index.js').MODELS)"
-```
+**Fix:** Check JSON syntax. Required fields: `name`, `task`, `models`, `repetitions`.
 
-### "Evaluator 'xyz' not registered"
+### Evaluator not found
 
-The evaluator name doesn't exist. Options:
-1. Use a built-in: `test-pass-rate` or `lint-score`
-2. Register a custom evaluator before running the experiment
-3. Check spelling in the config file
+**Error:** `"Evaluator 'my-eval' not registered"`
 
-### "Budget exceeded"
+**Fix:** Use a built-in: `test-pass-rate` or `lint-score`.
 
-Your experiment ran out of tokens. Options:
-1. Reduce `repetitions`
-2. Increase `budget.maxTotal`
-3. Use cheaper models
-4. Make the task simpler (shorter prompt)
+### Tests fail after setup
 
-### Tests failing after setup
-
-Ensure you have the latest Squad SDK:
-
+**Fix:**
 ```bash
 npm install @bradygaster/squad-sdk@latest
 npm run build
 npm run test
 ```
 
+### Results seem off
+
+**Possible causes:**
+- Only 1 repetition (increase `repetitions` to 3+)
+- Evaluator doesn't match task (e.g., using `test-pass-rate` for non-code tasks)
+- Budget limits hit (check logs for "Budget exceeded")
+
 ## Next Steps
 
-1. **Try different models**: Edit `my-experiment.json` and add more models to compare
-2. **Create custom evaluators**: Implement domain-specific quality metrics
-3. **Automate with CI/CD**: Schedule regular experiment runs to track model performance over time
-4. **Statistical analysis**: Use the confidence intervals to make statistically sound decisions
-5. **Read the README**: See [README.md](./README.md) for full architecture and API documentation
+1. **Try different models** — Edit `my-first-experiment.json`, add more models
+2. **Test your own task** — Change the `prompt` to something real
+3. **Increase repetitions** — More runs = more reliable averages
+4. **Read [README.md](./README.md)** — For architecture, custom evaluators, and programmatic API
+5. **Schedule runs** — Use cron or CI to regularly compare models
+
+## File Locations
+
+- **Config files:** Put `.json` files anywhere you like
+- **Results:** Saved to `results/` directory with timestamp
+- **Source code:** All framework logic in `src/`
+- **Tests:** `test/` directory shows usage examples
 
 ## Getting Help
 
-- Check [README.md](./README.md) for architecture and module documentation
-- Review example configs in the `test/fixtures/` directory
-- Run tests to understand expected behavior: `npm run test`
-- Check the PLAN.md for implementation phases and feature details
+- **Config questions:** See README.md "Configuration" section
+- **Custom evaluators:** See README.md "Adding Custom Evaluators"
+- **Programmatic API:** See README.md "Programmatic API"
+- **Run tests:** `npm run test` shows expected behavior
+- **Check examples:** Look in `test/fixtures/` for sample configs
