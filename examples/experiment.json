@@ -1,0 +1,14 @@
+{
+  "name": "code-generation-comparison",
+  "task": {
+    "prompt": "Write a TypeScript function that validates email addresses",
+    "inputFiles": [],
+    "evaluator": "test-pass-rate"
+  },
+  "models": ["gpt-4o", "claude-sonnet-4-20250514", "gpt-3.5-turbo"],
+  "repetitions": 3,
+  "budget": {
+    "maxPerRun": 5000,
+    "maxTotal": 50000
+  }
+}

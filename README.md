@@ -9,11 +9,16 @@ This framework lets you systematically compare AI model performance by running i
 ```bash
 npm install
 npm run build
+npm link          # makes "squad-ab-test" available globally
 ```
 
 ### 2. Create an Experiment Config
 
-Create a JSON file (e.g., `my-experiment.json`) that defines what to test:
+```bash
+squad-ab-test init              # creates experiment.json
+```
+
+Or copy `examples/experiment.json` and edit it. The config format:
 
 ```json
 {
@@ -44,14 +49,13 @@ Create a JSON file (e.g., `my-experiment.json`) that defines what to test:
 ### 3. Run the Experiment
 
 ```bash
-node -e "
-const { runExperiment } = require('./dist/cli/runExperiment.js');
-runExperiment('./my-experiment.json', { maxConcurrent: 3 })
-  .then(result => {
-    console.log(result.output);
-    process.exit(result.exitCode);
-  });
-"
+squad-ab-test run experiment.json
+```
+
+Options:
+```bash
+squad-ab-test run experiment.json --concurrency 5
+squad-ab-test run experiment.json --output results/
 ```
 
 ### 4. Read the Results Table
@@ -59,32 +63,24 @@ runExperiment('./my-experiment.json', { maxConcurrent: 3 })
 The output shows side-by-side comparison:
 
 ```
-================================================================================
-A/B Test Results: code-generation-comparison
-Repetitions: 3
-================================================================================
+Experiment: code-generation-comparison
+Date: 2025-01-15T10:30:00.000Z
+N=3 repetitions
 
-Model             Avg Cost ($)  Avg Latency (ms)  Quality Score  StdDev
-─────────────────────────────────────────────────────────────────────────
-gpt-4o            0.0045        1250              0.95           0.03
-claude-sonnet-4   0.0038        980               0.92           0.05
-gpt-3.5-turbo     0.0012        450               0.87           0.08
-
-Recommendations:
-  ✓ Best Quality:  gpt-4o (0.95)
-  ⚡ Fastest:      gpt-3.5-turbo (450ms)
-  💰 Cheapest:     gpt-3.5-turbo ($0.0012)
-
-================================================================================
+Model               | Avg Cost    | Avg Latency   | Quality   | Stddev
+------------------------------------------------------------------------
+gpt-4o              | 0.0045      | 1250ms        | 0.950     | 0.030
+claude-sonnet-4     | 0.0038      | 980ms         | 0.920     | 0.050
+gpt-3.5-turbo       | 0.0012      | 450ms         | 0.870     | 0.080
 ```
 
 **Columns explained:**
-- **Avg Cost ($)**: Average token cost per run
-- **Avg Latency (ms)**: Average response time
-- **Quality Score**: Evaluator result (0–1 scale)
-- **StdDev**: Standard deviation across repetitions
+- **Avg Cost**: Average token cost per run
+- **Avg Latency**: Average response time
+- **Quality**: Evaluator result (0–1 scale)
+- **Stddev**: Standard deviation across repetitions
 
-Results are also saved as JSON for further analysis.
+Results are also saved as JSON when using `--output`.
 
 ## Extending This Example
 
@@ -95,11 +91,11 @@ Register an evaluator to define custom quality metrics:
 ```typescript
 import { EvaluatorRegistry } from './src/evaluators/EvaluatorRegistry.js';
 
-const registry = EvaluatorRegistry.getInstance();
+const registry = new EvaluatorRegistry();
 
 registry.register('my-eval', async (output: string) => {
-  const score = calculateQuality(output);  // Your logic
-  return { score, details: 'My evaluation result' };
+  const score = calculateQuality(output);  // Your logic — return 0–1
+  return score;
 });
 ```
 
@@ -140,11 +136,20 @@ Use the framework directly in TypeScript:
 import { ConfigParser } from './src/config/ConfigParser.js';
 import { Orchestrator } from './src/orchestration/Orchestrator.js';
 import { Reporter } from './src/reporting/Reporter.js';
+import { AgentExecutor } from './src/agent/AgentSpawner.js';
 
-const config = await ConfigParser.parse('./config.json');
-const results = await Orchestrator.run(config, { maxConcurrent: 5 });
-const report = Reporter.generateTable(results);
-console.log(report);
+// Orchestrator requires an executor function
+const executor: AgentExecutor = async (task, model) => {
+  // Call your model API here
+  return { output: '...', inputTokens: 100, outputTokens: 200, cost: 0.01 };
+};
+
+const parser = new ConfigParser();
+const config = parser.parse(fs.readFileSync('./config.json', 'utf-8'));
+const orchestrator = new Orchestrator(executor, { maxConcurrent: 5 });
+const result = await orchestrator.run(config);
+const reporter = new Reporter();
+console.log(reporter.formatTable(result));
 ```
 
 ### Architecture Overview

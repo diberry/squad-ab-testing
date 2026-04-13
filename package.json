@@ -4,6 +4,9 @@
   "description": "Multi-Model A/B Testing Framework for Squad SDK",
   "type": "module",
   "main": "dist/index.js",
+  "bin": {
+    "squad-ab-test": "dist/cli/index.js"
+  },
   "scripts": {
     "build": "tsc",
     "test": "vitest"

@@ -18,6 +18,7 @@ node --version && npm --version
 
 ```bash
 npm install && npm run build
+npm link    # makes squad-ab-test available as a CLI command
 ```
 
 Verify everything works:
@@ -31,7 +32,11 @@ Expected: All tests pass (✓).
 
 ### Step 1: Create experiment.json
 
-Create a file named `my-first-experiment.json`:
+```bash
+squad-ab-test init
+```
+
+This creates `experiment.json` with a sample config. Open it and customize:
 
 ```json
 {
@@ -60,56 +65,41 @@ Create a file named `my-first-experiment.json`:
 ### Step 2: Run the Experiment
 
 ```bash
-node -e "
-const { runExperiment } = require('./dist/cli/runExperiment.js');
-runExperiment('./my-first-experiment.json', { maxConcurrent: 3 })
-  .then(result => {
-    console.log(result.output);
-    process.exit(result.exitCode);
-  });
-"
+squad-ab-test run experiment.json
 ```
 
-Wait for completion (~1-2 min for mock models).
+Wait for completion (~1-2 sec for mock models).
 
 ### Step 3: Read the Results
 
 Output shows a comparison table:
 
 ```
-================================================================================
-A/B Test Results: text-summarization-test
-Repetitions: 2
-================================================================================
+Experiment: text-summarization-test
+Date: 2025-01-15T10:30:00.000Z
+N=2 repetitions
 
-Model             Avg Cost ($)  Avg Latency (ms)  Quality Score  StdDev
-─────────────────────────────────────────────────────────────────────────
-gpt-4o            0.0045        1250              0.95           0.03
-claude-sonnet-4   0.0038        980               0.92           0.05
-gpt-3.5-turbo     0.0012        450               0.87           0.08
-
-Recommendations:
-  ✓ Best Quality:  gpt-4o (0.95)
-  ⚡ Fastest:      gpt-3.5-turbo (450ms)
-  💰 Cheapest:     gpt-3.5-turbo ($0.0012)
-
-================================================================================
+Model               | Avg Cost    | Avg Latency   | Quality   | Stddev
+------------------------------------------------------------------------
+gpt-4o              | 0.0045      | 1250ms        | 0.950     | 0.030
+claude-sonnet-4     | 0.0038      | 980ms         | 0.920     | 0.050
+gpt-3.5-turbo       | 0.0012      | 450ms         | 0.870     | 0.080
 ```
 
 **What each column means:**
-- **Avg Cost ($)**: Average expense per run (lower = cheaper)
-- **Avg Latency (ms)**: Average response time (lower = faster)
-- **Quality Score**: Evaluator result 0–1 (higher = better)
-- **StdDev**: Consistency (lower = more predictable)
+- **Avg Cost**: Average expense per run (lower = cheaper)
+- **Avg Latency**: Average response time (lower = faster)
+- **Quality**: Evaluator result 0–1 (higher = better)
+- **Stddev**: Consistency (lower = more predictable)
 
 ### Step 4: Compare & Choose
 
 Use the results to answer:
 
-1. **Best overall?** Look at the recommendations section
-2. **Cost vs. quality?** Compare Cost column vs. Quality Score
+1. **Best overall?** Look at the model with highest Quality score
+2. **Cost vs. quality?** Compare Cost column vs. Quality
 3. **Speed matters?** Pick the model with lowest latency
-4. **Consistent?** Models with low StdDev are more reliable
+4. **Consistent?** Models with low Stddev are more reliable
 
 ## Common Tweaks
 
@@ -177,6 +167,14 @@ Paths are relative to the config file location.
 
 Experiment stops if limits are exceeded.
 
+### Save Results to Disk
+
+```bash
+squad-ab-test run experiment.json --output results/
+```
+
+Results are saved as JSON for further analysis.
+
 ## What Happens During a Run
 
 1. ✅ Config loads and validates
@@ -184,8 +182,7 @@ Experiment stops if limits are exceeded.
 3. ✅ Each agent runs your task and collects tokens/latency
 4. ✅ Evaluator scores the output (0–1)
 5. ✅ Metrics are aggregated (averages, stddev, etc.)
-6. ✅ Table and JSON results are written
-7. ✅ Recommendations are generated
+6. ✅ Table results are printed
 
 ## Troubleshooting
 
@@ -219,7 +216,7 @@ npm run test
 
 ## Next Steps
 
-1. **Try different models** — Edit `my-first-experiment.json`, add more models
+1. **Try different models** — Edit `experiment.json`, add more models
 2. **Test your own task** — Change the `prompt` to something real
 3. **Increase repetitions** — More runs = more reliable averages
 4. **Read [README.md](./README.md)** — For architecture, custom evaluators, and programmatic API
@@ -228,14 +225,17 @@ npm run test
 ## File Locations
 
 - **Config files:** Put `.json` files anywhere you like
-- **Results:** Saved to `results/` directory with timestamp
+- **Results:** Saved to specified `--output` directory with JSON format
 - **Source code:** All framework logic in `src/`
 - **Tests:** `test/` directory shows usage examples
 
 ## Getting Help
 
+```bash
+squad-ab-test --help
+```
+
 - **Config questions:** See README.md "Configuration" section
 - **Custom evaluators:** See README.md "Adding Custom Evaluators"
 - **Programmatic API:** See README.md "Programmatic API"
 - **Run tests:** `npm run test` shows expected behavior
-- **Check examples:** Look in `test/fixtures/` for sample configs
